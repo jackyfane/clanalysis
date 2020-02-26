@@ -1,0 +1,29 @@
+body {
+    padding-top: 38px;
+}
+
+.btn-toolbar {
+    margin-top: 10px;
+    margin-left: 10px;
+}
+
+table {
+    margin-top: 10px;
+}
+
+table td, th {
+    text-align: center;
+}
+
+#pagination {
+    padding: 0px;
+    margin: 0px;
+}
+
+#pagination .pagination {
+    margin: 0px;
+}
+
+.icon-triangle {
+    background-image: image('/images/triangle.png');
+}

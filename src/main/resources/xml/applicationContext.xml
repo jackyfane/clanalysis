@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context-3.0.xsd
+	http://www.springframework.org/schema/mvc
+	http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
+
+    <!-- 载入配置文件 -->
+    <context:property-placeholder location="classpath:hibernate.properties"/>
+
+    <!-- 启动自动注解，@Autowired -->
+    <context:annotation-config/>
+
+    <!-- 设置使用注解的类所在的jar包 -->
+    <context:component-scan base-package="com.enmotech.clanalysis.*"/>
+
+    <!-- 解决IllegalArgumentException Can not set field to $Proxy 在spring中使用事物或AOP遇到的错误 -->
+    <tx:annotation-driven transaction-manager="transactionManager"
+                          proxy-target-class="true"/>
+
+    <!-- 启用spring mvc 注解-->
+    <mvc:annotation-driven/>
+
+    <!--springMVC前端请求找不到资源路径（HTTP Status 404）问题
+            HTTP Status 404 - /goods/index
+            type Status report
+            message /goods/index
+            description The requested resource (/goods/index) is not available.
+    -->
+    <mvc:default-servlet-handler/>
+
+    <!--MVC视图配置 -->
+    <bean class="org.springframework.web.servlet.view.ResourceBundleViewResolver">
+        <property name="order" value="1"/>
+        <property name="basename" value="views"/>
+    </bean>
+
+    <!-- velocity环境配置
+    <bean id="velocityConfig"
+          class="org.springframework.web.servlet.view.velocity.VelocityConfigurer">
+        <property name="configLocation" value="classpath:velocity.properties"/>
+        <property name="resourceLoaderPath" value="/WEB-INF/velocity/"/>
+        <property name="velocityProperties">
+            <props>
+                <prop key="directive.foreach.counter.name">loopCoounter</prop>
+                <prop key="directive.foreach.counter.initial.value">0</prop>
+                <prop key="input.encoding">UTF-8</prop>
+                <prop key="output.encoding">UTF-8</prop>
+                <prop key="contentType">text/html;charset=UTF-8</prop>
+            </props>
+        </property>
+    </bean>
+	-->
+
+    <!-- 对转向页面的路径解析。prefix：前缀， suffix：后缀 -->
+    <bean id="jspViewResolver"
+          class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="order" value="2"/>
+        <property name="viewClass"
+                  value="org.springframework.web.servlet.view.JstlView"/>
+        <property name="cache" value="true"/>
+        <property name="prefix" value="/WEB-INF/jsp/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+
+    <!--velocity
+    <bean id="velocityViewResolver"
+          class="org.springframework.web.servlet.view.velocity.VelocityViewResolver">
+        <property name="cache" value="true"/>
+        <property name="prefix" value="/"/>
+        <property name="suffix" value=".vm"/>
+    </bean>
+	-->
+    <bean id="viewResolver"
+          class="com.enmotech.clanalysis.util.MultipleViewResolver">
+        <property name="viewResolvers">
+            <map>
+                <entry key="jsp">
+                    <ref bean="jspViewResolver"/>
+                </entry>
+                <!-- 
+                <entry key="vm">
+                    <ref bean="velocityViewResolver"/>
+                </entry>
+                 -->
+            </map>
+        </property>
+    </bean>
+
+    <!-- 数据库连接池配置
+        在使用org.apache.commons.dbcp2.BasicDataSource时由于Hibernate4不支持，会抛出以下异常：
+        java.lang.UnsupportedOperationException: Not supported by BasicDataSource
+        解决方案是org.springframework.jdbc.datasource.DriverManagerDataSource替代
+        org.apache.commons.dbcp2.BasicDataSource
+     -->
+    <bean id="dataSource"
+          class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${jdbc.driverClassName}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <bean id="sessionFactory"
+          class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.dialect">${hibernate.dialect}</prop>
+                <prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+                <prop key="hibernate.format_sql">${hibernate.format_sql}</prop>
+                <prop key="hibernate.hbm2ddl.auto">${hibernate.hbm2ddl.auto}
+                </prop>
+                <prop key="hibernate.temp.use_jdbc_metadata_defaults">false
+                </prop>
+                <prop key="hibernate.cache.use_query_cache">false</prop>
+                <prop key="hibernate.cache.use_second_level_cache">true</prop>
+            </props>
+        </property>
+        <!-- 自动扫描实体对象 com.enmotech.clanalysis.entity的包结构中存放实体类-->
+        <property name="packagesToScan">
+            <list>
+                <value>com.enmotech.clanalysis.entity</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- Hibernate配置事务管理 -->
+    <bean id="transactionManager"
+          class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+
+    <!-- 事务执行方式
+        REQUIRED：指定当前方法必需在事务环境中运行，
+        如果当前有事务环境就加入当前正在执行的事务环境，
+        如果当前没有事务，就新建一个事务。
+        这是默认值。
+    -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="create*" propagation="REQUIRED"/>
+            <tx:method name="save*" propagation="REQUIRED"/>
+            <tx:method name="add*" propagation="REQUIRED"/>
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="remove*" propagation="REQUIRED"/>
+            <tx:method name="del*" propagation="REQUIRED"/>
+            <tx:method name="import*" propagation="REQUIRED"/>
+            <tx:method name="export*" propagation="REQUIRED"/>
+            <tx:method name="find*" propagation="REQUIRED"/>
+            <tx:method name="get*" propagation="REQUIRED"/>
+            <tx:method name="query*" propagation="REQUIRED"/>
+            <!--
+                指定当前方法以非事务方式执行操作，如果当前存在事务，就把当前事务挂起，等我以非事务的状态运行完，再继续原来的事务。
+                查询定义即可
+                read-only="true"  表示只读
+             -->
+            <tx:method name="*" propagation="NOT_SUPPORTED"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <bean id="hibernateTemplate"
+          class="org.springframework.orm.hibernate4.HibernateTemplate">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+
+    <aop:aspectj-autoproxy/>
+    <tx:annotation-driven/>
+
+    <!-- 定义切面，在 * com.enmotech.clanalysis.service.*ServiceImpl.*(..) 中执行有关的hibernate session的事务操作 -->
+    <aop:config>
+        <aop:pointcut id="serviceOperation"
+                      expression="execution(* com.enmotech.clanalysis.service.*Service.*(..))"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="serviceOperation"/>
+    </aop:config>
+
+    <!-- 文件上传 -->
+    <bean id="multipartResolver"
+          class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <!-- 设置上传文件的最大尺寸为1MB，如果不是maxUploadSize，表示不限制文件大小 -->
+        <!--
+        <property name="maxUploadSize" value="104857699"/>
+        -->
+        <property name="maxInMemorySize" value="4096"/>
+        <property name="defaultEncoding" value="UTF-8"/>
+    </bean>
+
+    <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"/>
+
+</beans>
